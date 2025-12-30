@@ -1,0 +1,5 @@
+m12_1e/
+__pycache__/
+*.pyc
+.venv/
+spelling_model_deployment.pkl
