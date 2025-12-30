@@ -1,11 +1,15 @@
 # FastAPI and web framework
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-pydantic>=2.0
+pydantic==2.5.0
 pydantic-settings==2.1.0
 
 # Elasticsearch
 elasticsearch==8.11.0
+
+# Machine Learning / NLP
+sentence-transformers>=3.0.0
+huggingface-hub>=0.26.0
 
 # Utilities
 python-multipart==0.0.6
