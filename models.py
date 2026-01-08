@@ -242,7 +242,7 @@ class ElasticDocumentEng(BaseModel):
         return " / ".join(parts)
 
     @staticmethod
-    def from_es_hit(hit: dict) -> "ElasticDocument":
+    def from_es_hit(hit: dict) -> "ElasticDocumentEng":
         """Create ElasticDocument from Elasticsearch hit"""
         src = hit.get("_source") or {}
         score = hit.get("_score")
@@ -253,24 +253,24 @@ class ElasticDocumentEng(BaseModel):
             for t in tradings_data:
                 if isinstance(t, dict):
                     try:
-                        tradings.append(Trading(**t))
+                        tradings.append(TradingEng(**t))
                     except Exception:
                         continue
         
-        path = ElasticDocument.build_path(
+        path = ElasticDocumentEng.build_path(
             src.get("name_en_d1"), 
             src.get("name_en_d2"), 
             src.get("name_en_d3")
         )
         
-        return ElasticDocument(
+        return ElasticDocumentEng(
             id=src.get("id") or hit.get("_id"),
             code=src.get("code"),
             score=score,
-            name_az_d1=src.get("name_en_d1"),
-            name_az_d2=src.get("name_en_d2"),
-            name_az_d3=src.get("name_en_d3"),
-            name_az_d4=src.get("name_en_d4"),
+            name_en_d1=src.get("name_en_d1"),
+            name_en_d2=src.get("name_en_d2"),
+            name_en_d3=src.get("name_en_d3"),
+            name_en_d4=src.get("name_en_d4"),
             tradings=tradings,
             Path=path or src.get("Path"),
             highlight=hit.get("highlight"),
@@ -392,10 +392,10 @@ class ElasticDocumentRu(BaseModel):
     id: str
     code: Optional[str] = None
     score: Optional[float] = None
-    name_en_d1: Optional[str] = None
-    name_en_d2: Optional[str] = None
-    name_en_d3: Optional[str] = None
-    name_en_d4: Optional[str] = None
+    name_ru_d1: Optional[str] = None
+    name_ru_d2: Optional[str] = None
+    name_ru_d3: Optional[str] = None
+    name_ru_d4: Optional[str] = None
     tradings: List[TradingRu] = Field(default_factory=list)
     Path: Optional[str] = None
     highlight: Optional[Dict[str, List[str]]] = None 
@@ -418,7 +418,7 @@ class ElasticDocumentRu(BaseModel):
             for t in tradings_data:
                 if isinstance(t, dict):
                     try:
-                        tradings.append(Trading(**t))
+                        tradings.append(TradingRu(**t))
                     except Exception:
                         continue
         
@@ -432,10 +432,10 @@ class ElasticDocumentRu(BaseModel):
             id=src.get("id") or hit.get("_id"),
             code=src.get("code"),
             score=score,
-            name_az_d1=src.get("name_ru_d1"),
-            name_az_d2=src.get("name_ru_d2"),
-            name_az_d3=src.get("name_ru_d3"),
-            name_az_d4=src.get("name_ru_d4"),
+            name_ru_d1=src.get("name_ru_d1"),
+            name_ru_d2=src.get("name_ru_d2"),
+            name_ru_d3=src.get("name_ru_d3"),
+            name_ru_d4=src.get("name_ru_d4"),
             tradings=tradings,
             Path=path or src.get("Path"),
             highlight=hit.get("highlight"),
