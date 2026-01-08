@@ -4,7 +4,7 @@ from elasticsearch import AsyncElasticsearch
 
 from models import SearchRequest, HybridRetrievedResponseSet, SpellingRequest, SpellingResponse,HybridRetrievedResponseSetEng, HybridRetrievedResponseSetRu,SearchRequestRu, OrganizationSearchRequest, OrganizationSearchResponse, OrganizationDocument, SearchRequestEng, SpellingRequestRu
 from services import SearchService, SearchServiceRu, SearchServiceEn
-from config import HOST,API_KEY, ES_INDEX, MODEL_DIR, SPELLING_MODEL_DIR, ORGANIZATIONS_INDEX, SOURCE_ES_URL, SOURCE_ES_API_KEY,ES_INDEX_EN, ES_INDEX_RU,load_model, setup_logging
+from config import HOST,API_KEY, ES_INDEX, SPELLING_MODEL_DIR, ORGANIZATIONS_INDEX, SOURCE_ES_URL, SOURCE_ES_API_KEY,ES_INDEX_EN, ES_INDEX_RU,load_model, setup_logging
 #from use_model import load_model as load_spelling_model, predict as spelling_predict
 from query_builder import build_organization_query
 
@@ -278,3 +278,77 @@ async def health_check():
 async def health():
     """Basic health check endpoint"""
     return {"status": "ok"}
+
+
+@app.post("/load-model")
+async def load_model_endpoint():
+    """
+    Load or reload the embedding model.
+    Useful for deployment scenarios where you want to control model loading.
+    """
+    try:
+        logger.info("Loading embedding model via API endpoint...")
+        app.state.model = load_model()
+        
+        # Reinitialize search services with the new model
+        app.state.search_service = SearchService(
+            es_client=app.state.es,
+            model=app.state.model,
+            index=ES_INDEX
+        )
+        app.state.search_service_ru = SearchServiceRu(
+            es_client=app.state.es,
+            model=app.state.model,
+            index=ES_INDEX_RU
+        )
+        app.state.search_service_en = SearchServiceEn(
+            es_client=app.state.es,
+            model=app.state.model,
+            index=ES_INDEX_EN
+        )
+        
+        logger.info("✅ Model loaded successfully")
+        
+        return {
+            "status": "success",
+            "message": "Model loaded successfully",
+            "model_path": MODEL_DIR,
+            "model_loaded": app.state.model is not None
+        }
+    except Exception as e:
+        logger.error(f"Failed to load model: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load model: {str(e)}"
+        )
+
+
+@app.get("/model-info")
+async def model_info():
+    """Get information about the currently loaded model"""
+    try:
+        model_loaded = app.state.model is not None
+        
+        info = {
+            "model_loaded": model_loaded,
+            "model_path": MODEL_DIR,
+            "model_repo": os.getenv("MODEL_REPO", "DmitriyKuramshin/m12_1e"),
+        }
+        
+        if model_loaded:
+            # Get model details if available
+            try:
+                info["model_type"] = type(app.state.model).__name__
+                if hasattr(app.state.model, 'get_sentence_embedding_dimension'):
+                    info["embedding_dimension"] = app.state.model.get_sentence_embedding_dimension()
+            except Exception as e:
+                logger.warning(f"Could not get model details: {e}")
+        
+        return info
+    except Exception as e:
+        logger.error(f"Error getting model info: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting model info: {str(e)}"
+        )
+
