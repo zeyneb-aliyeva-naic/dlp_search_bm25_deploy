@@ -4,7 +4,7 @@ from elasticsearch import AsyncElasticsearch
 
 from models import SearchRequest, HybridRetrievedResponseSet, SpellingRequest, SpellingResponse,HybridRetrievedResponseSetEng, HybridRetrievedResponseSetRu,SearchRequestRu, OrganizationSearchRequest, OrganizationSearchResponse, OrganizationDocument, SearchRequestEng, SpellingRequestRu
 from services import SearchService, SearchServiceRu, SearchServiceEn
-from config import ES_URL, ES_API_KEY, ES_INDEX, MODEL_DIR, SPELLING_MODEL_DIR, ORGANIZATIONS_INDEX, SOURCE_ES_URL, SOURCE_ES_API_KEY,ES_INDEX_EN, ES_INDEX_RU,load_model, setup_logging
+from config import HOST,API_KEY, ES_INDEX, MODEL_DIR, SPELLING_MODEL_DIR, ORGANIZATIONS_INDEX, SOURCE_ES_URL, SOURCE_ES_API_KEY,ES_INDEX_EN, ES_INDEX_RU,load_model, setup_logging
 from use_model import load_model as load_spelling_model, predict as spelling_predict
 from query_builder import build_organization_query
 
@@ -25,8 +25,8 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup():
     """Initialize Elasticsearch connection and load model on startup"""
-    app.state.es = AsyncElasticsearch(hosts=[ES_URL], api_key=ES_API_KEY)
-    logger.info(f"✅ Connected to Elasticsearch at {ES_URL}")
+    app.state.es = AsyncElasticsearch(hosts=[HOST], api_key=API_KEY)
+    logger.info(f"✅ Connected to Elasticsearch at {HOST}")
 
     app.state.es_source = AsyncElasticsearch(hosts=[SOURCE_ES_URL], api_key=SOURCE_ES_API_KEY)
     print(f"✅ Connected to Source Elasticsearch at {SOURCE_ES_URL}")
@@ -115,21 +115,21 @@ async def search(req: SearchRequest) -> HybridRetrievedResponseSet:
     summary="Hybrid Search with Vector Embeddings",
     description="Perform hybrid search combining BM25 and vector similarity"
 )
-async def search(req: SearchRequestEng) -> HybridRetrievedResponseSetEng:
+async def search_en(req: SearchRequestEng) -> HybridRetrievedResponseSetEng:
     """
     Execute a hybrid search query against Elasticsearch.
     
     Args:
-        req: SearchRequest containing query text, filters, size/top_k, alpha, and use_vector flag
+        req: SearchRequestEng containing query text, filters, size/top_k, alpha, and use_vector flag
         
     Returns:
-        HybridRetrievedResponseSet with ranked search results
+        HybridRetrievedResponseSetEng with ranked search results
         
     Raises:
         HTTPException: If Elasticsearch query fails
     """
     try:
-        ranked, total_count = await app.state.search_service.search(req)
+        ranked, total_count = await app.state.search_service_en.search(req)
         
         return HybridRetrievedResponseSetEng(
             **{
@@ -152,12 +152,12 @@ async def search(req: SearchRequestEng) -> HybridRetrievedResponseSetEng:
     summary="Hybrid Search with Vector Embeddings",
     description="Perform hybrid search combining BM25 and vector similarity"
 )
-async def search(req: SearchRequestRu) -> HybridRetrievedResponseSetRu:
+async def search_ru(req: SearchRequestRu) -> HybridRetrievedResponseSetRu:
     """
     Execute a hybrid search query against Elasticsearch.
     
     Args:
-        req: SearchRequest containing query text, filters, size/top_k, alpha, and use_vector flag
+        req: SearchRequestRu containing query text, filters, size/top_k, alpha, and use_vector flag
         
     Returns:
         HybridRetrievedResponseSet with ranked search results
@@ -254,7 +254,7 @@ async def health_check():
             "elasticsearch": {
                 "status": "connected",
                 "cluster_name": es_health.get("cluster_name"),
-                "url": ES_URL,
+                "url": HOST,
                 "index": ES_INDEX
             },
             "model": {
@@ -278,4 +278,76 @@ async def health():
     """Basic health check endpoint"""
     return {"status": "ok"}
 
+
+@app.post("/load-model")
+async def load_model_endpoint():
+    """
+    Load or reload the embedding model.
+    Useful for deployment scenarios where you want to control model loading.
+    """
+    try:
+        logger.info("Loading embedding model via API endpoint...")
+        app.state.model = load_model()
+        
+        # Reinitialize search services with the new model
+        app.state.search_service = SearchService(
+            es_client=app.state.es,
+            model=app.state.model,
+            index=ES_INDEX
+        )
+        app.state.search_service_ru = SearchServiceRu(
+            es_client=app.state.es,
+            model=app.state.model,
+            index=ES_INDEX_RU
+        )
+        app.state.search_service_en = SearchServiceEn(
+            es_client=app.state.es,
+            model=app.state.model,
+            index=ES_INDEX_EN
+        )
+        
+        logger.info("✅ Model loaded successfully")
+        
+        return {
+            "status": "success",
+            "message": "Model loaded successfully",
+            "model_path": MODEL_DIR,
+            "model_loaded": app.state.model is not None
+        }
+    except Exception as e:
+        logger.error(f"Failed to load model: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to load model: {str(e)}"
+        )
+
+
+@app.get("/model-info")
+async def model_info():
+    """Get information about the currently loaded model"""
+    try:
+        model_loaded = app.state.model is not None
+        
+        info = {
+            "model_loaded": model_loaded,
+            "model_path": MODEL_DIR,
+            "model_repo": os.getenv("MODEL_REPO", "DmitriyKuramshin/m12_1e"),
+        }
+        
+        if model_loaded:
+            # Get model details if available
+            try:
+                info["model_type"] = type(app.state.model).__name__
+                if hasattr(app.state.model, 'get_sentence_embedding_dimension'):
+                    info["embedding_dimension"] = app.state.model.get_sentence_embedding_dimension()
+            except Exception as e:
+                logger.warning(f"Could not get model details: {e}")
+        
+        return info
+    except Exception as e:
+        logger.error(f"Error getting model info: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error getting model info: {str(e)}"
+        )
 
