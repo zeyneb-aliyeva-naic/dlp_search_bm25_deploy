@@ -5,7 +5,7 @@ from elasticsearch import AsyncElasticsearch
 from models import SearchRequest, HybridRetrievedResponseSet, SpellingRequest, SpellingResponse,HybridRetrievedResponseSetEng, HybridRetrievedResponseSetRu,SearchRequestRu, OrganizationSearchRequest, OrganizationSearchResponse, OrganizationDocument, SearchRequestEng, SpellingRequestRu
 from services import SearchService, SearchServiceRu, SearchServiceEn
 from config import HOST,API_KEY, ES_INDEX, MODEL_DIR, SPELLING_MODEL_DIR, ORGANIZATIONS_INDEX, SOURCE_ES_URL, SOURCE_ES_API_KEY,ES_INDEX_EN, ES_INDEX_RU,load_model, setup_logging
-from use_model import load_model as load_spelling_model, predict as spelling_predict
+#from use_model import load_model as load_spelling_model, predict as spelling_predict
 from query_builder import build_organization_query
 
 import os
@@ -52,7 +52,7 @@ async def startup():
     )
 
     # Load spelling correction model
-    try:
+"""    try:
         spelling_model_path = SPELLING_MODEL_DIR
         app.state.spell_model, app.state.spell_tokenizer, app.state.spell_config = load_spelling_model(
             spelling_model_path,
@@ -63,6 +63,7 @@ async def startup():
         logger.error(f"❌ Failed to load spelling model: {e}")
         app.state.spell_model = None
         app.state.spell_tokenizer = None
+        """
 
 @app.on_event("shutdown")
 async def shutdown():
