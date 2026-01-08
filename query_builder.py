@@ -267,14 +267,14 @@ def build_es_bool_query_ru(req: SearchRequestRu) -> dict:
 
     if is_only_code:
         # Code-only query: use prefix matching with boosting
-        should_clauses.extend(_build_code_clauses(query_text))
+        should_clauses.extend(_build_code_clauses_ru(query_text))
     else:
         # Text query: use multi_match and combined_fields
-        should_clauses.extend(_build_text_clauses(query_text))
+        should_clauses.extend(_build_text_clauses_ru(query_text))
         
         # Add embedded code logic if query contains numbers
         if has_code:
-            should_clauses.extend(_build_code_clauses(numeric_code))
+            should_clauses.extend(_build_code_clauses_ru(numeric_code))
 
     bool_query = {
         "should": should_clauses,
@@ -282,7 +282,7 @@ def build_es_bool_query_ru(req: SearchRequestRu) -> dict:
     }
 
     # Add filters if specified
-    filters = _build_filters(f)
+    filters = _build_filters_ru(f)
     if filters:
         bool_query["filter"] = filters
 
@@ -405,7 +405,7 @@ def build_hybrid_vector_query_ru(req: SearchRequestRu, query_vector: List[float]
     logger.info(f"Building hybrid vector query with alpha={req.alpha}")
     
     # Build the base BM25 query
-    base_query = build_es_bool_query(req)
+    base_query = build_es_bool_query_ru(req)
     bool_query = base_query["bool"]
 
     # Parent weights for hierarchical embeddings
@@ -503,14 +503,14 @@ def build_es_bool_query_en(req: SearchRequestEng) -> dict:
 
     if is_only_code:
         # Code-only query: use prefix matching with boosting
-        should_clauses.extend(_build_code_clauses(query_text))
+        should_clauses.extend(_build_code_clauses_en(query_text))
     else:
         # Text query: use multi_match and combined_fields
-        should_clauses.extend(_build_text_clauses(query_text))
+        should_clauses.extend(_build_text_clauses_en(query_text))
         
         # Add embedded code logic if query contains numbers
         if has_code:
-            should_clauses.extend(_build_code_clauses(numeric_code))
+            should_clauses.extend(_build_code_clauses_en(numeric_code))
 
     bool_query = {
         "should": should_clauses,
@@ -518,7 +518,7 @@ def build_es_bool_query_en(req: SearchRequestEng) -> dict:
     }
 
     # Add filters if specified
-    filters = _build_filters(f)
+    filters = _build_filters_en(f)
     if filters:
         bool_query["filter"] = filters
 
@@ -641,7 +641,7 @@ def build_hybrid_vector_query_en(req: SearchRequestEng, query_vector: List[float
     logger.info(f"Building hybrid vector query with alpha={req.alpha}")
     
     # Build the base BM25 query
-    base_query = build_es_bool_query(req)
+    base_query = build_es_bool_query_en(req)
     bool_query = base_query["bool"]
 
     # Parent weights for hierarchical embeddings
